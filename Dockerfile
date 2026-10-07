@@ -16,7 +16,7 @@ USER node
 RUN --network=none npm test && npm run check && npm run validate-config -- config/thin.example.json
 
 FROM ${NODE_IMAGE} AS runtime
-LABEL org.opencontainers.image.title="MCP Gateway" org.opencontainers.image.version="0.7.0-preview.0"
+LABEL org.opencontainers.image.title="MCP Gateway" org.opencontainers.image.version="0.7.0-preview.1"
 RUN addgroup -S -g 10001 gateway && adduser -S -D -H -u 10001 -G gateway gateway
 WORKDIR /app
 COPY --from=test --chown=10001:10001 /app/node_modules/ ./node_modules/

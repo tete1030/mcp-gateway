@@ -9,10 +9,12 @@ import { OutboxWorker } from './worker.mjs';
 import { HaMcpEvents } from './connectors/ha/events.mjs';
 import { HaEventSocket } from './connectors/ha/socket.mjs';
 import { HaHistory } from './connectors/ha/history.mjs';
+import { loadHaContract } from './connectors/ha/contract.mjs';
 
 export async function createThinAggregate(input, { env, readSecretFile, fetchImpl, openStore = options => SQLiteEventStore.open(options),
-  WebSocketImpl, send, now = Date.now, schedule = setTimeout, cancel = clearTimeout, diagnostic } = {}) {
-  const config = parseThinConfig(input), resolve = createSecretResolver(config.secrets, { ...(env ? { env } : {}), ...(readSecretFile ? { readSecretFile } : {}) });
+  WebSocketImpl, send, now = Date.now, schedule = setTimeout, cancel = clearTimeout, diagnostic, readHaContractFile } = {}) {
+  const config = parseThinConfig(input), contract = loadHaContract(config.haConnector, readHaContractFile);
+  const resolve = createSecretResolver(config.secrets, { ...(env ? { env } : {}), ...(readSecretFile ? { readSecretFile } : {}) });
   const service = await resolve(config.identity.secretRef); if (service.length < 32) throw new Error('Service credential too short');
   const backends = config.backends.filter(b => b.enabled).map(b => new DynamicBackend(b, { resolveSecret: resolve, ...(fetchImpl ? { fetchImpl } : {}) }));
   const ha = config.backends.find(b => b.id === config.haConnector.backendId), selected = config.haConnector.entityIds;
@@ -23,14 +25,14 @@ export async function createThinAggregate(input, { env, readSecretFile, fetchImp
       if (key.length !== 32 || key.toString('base64') !== text) throw new Error('Invalid external state key');
       try { store = await openStore({ file: config.events.state.databaseFile, key,
         encryptionNamespace: config.events.state.encryptionNamespace }); } finally { key.fill(0); }
-      events = new HaMcpEvents({ store, owner: config.identity.ownerId, entityIds: selected, retry: config.events.retry,
+      events = new HaMcpEvents({ store, owner: config.identity.ownerId, entityIds: selected, contract, retry: config.events.retry,
         now: () => new Date(now()), send: send ?? createCallbackTransport({ policy: config.events.callback }),
         authorize: async id => id === config.identity.ownerId, diagnostic });
       worker = new OutboxWorker(events, { schedule, cancel });
       if (config.haConnector.eventsEnabled) {
         await resolve(ha.auth.secretRef);
         const url = new URL('/api/websocket', ha.url); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-        socket = new HaEventSocket({ url: url.href, secretRef: ha.auth.secretRef }, { resolveSecret: resolve, receive: (...a) => events.receive(...a), now, schedule, cancel,
+        socket = new HaEventSocket({ url: url.href, secretRef: ha.auth.secretRef }, { resolveSecret: resolve, receive: (...a) => events.receive(...a), eventTypes: contract.eventTypes, now, schedule, cancel,
           ...(WebSocketImpl ? { WebSocketImpl } : {}) });
       }
     }

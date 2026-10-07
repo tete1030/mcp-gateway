@@ -37,6 +37,7 @@ test/**
 !test/compatibility.test.mjs
 !test/event-diagnostics.test.mjs
 !test/events.test.mjs
+!test/ha-contract.test.mjs
 !test/identity.test.mjs
 !test/persistence.test.mjs
 !test/subscription-refresh.test.mjs

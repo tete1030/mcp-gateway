@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { entityIds } from './connectors/ha/contract.mjs';
+import { entityIds, selectedEntity, contractPath } from './connectors/ha/contract.mjs';
 import { isCanonicalDnsHostname } from './callback-host-policy.mjs';
 import { SERVICE_SECRET_HEADER } from './identity.mjs';
 const id = z.string().regex(/^[a-z][a-z0-9_]{0,47}$/);
@@ -37,7 +37,7 @@ export const thinConfigSchema = z.object({
       jitter: z.boolean().default(true) }).strict().default({ delaysSeconds: [1, 5, 30], jitter: true }),
   }).strict(),
   haConnector: z.object({ backendId: id, eventsEnabled: z.boolean().default(false), historyEnabled: z.boolean().default(false),
-    entityIds: z.array(z.enum(entityIds)).min(1).max(5),
+    entityIds: z.array(selectedEntity).min(1).max(5), contractFile: contractPath.optional(),
   }).strict(),
 }).strict().superRefine((c, ctx) => {
   const fail = message => ctx.addIssue({ code: 'custom', message });
@@ -51,6 +51,7 @@ export const thinConfigSchema = z.object({
     if (b.tools.mode === 'passthrough' && b.tools.allow !== undefined) fail('Passthrough cannot specify allow');
   }
   if (new Set(c.haConnector.entityIds).size !== c.haConnector.entityIds.length) fail('Duplicate selected entity');
+  if (!c.haConnector.contractFile && c.haConnector.entityIds.some(id => !entityIds.includes(id))) fail('Selected entity requires external fixed resource contract');
   if (new Set(c.events.callback.allowedHosts).size !== c.events.callback.allowedHosts.length) fail('Duplicate callback host');
   if (c.events.enabled && !c.events.state) fail('Events require persistent encrypted state');
   if (c.haConnector.eventsEnabled && !c.events.enabled) fail('HA event adapter requires MCP Events');

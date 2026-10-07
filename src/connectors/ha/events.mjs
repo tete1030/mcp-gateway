@@ -1,16 +1,17 @@
 import { McpEvents } from '../../events.mjs';
-import { eventDefinitions, mapHaEvent } from './contract.mjs';
+import { defaultContract, mapHaEvent } from './contract.mjs';
 
 export class HaMcpEvents extends McpEvents {
   #seen = new Map();
   #tail = Promise.resolve();
-  constructor(options) { super({ ...options, definitions: eventDefinitions }); this.allowedEntities = options.entityIds; this.owner = options.owner; }
+  constructor(options) { const contract = options.contract ?? defaultContract;
+    super({ ...options, definitions: contract.eventDefinitions }); this.contract = contract; this.allowedEntities = options.entityIds; this.owner = options.owner; }
   receive(type, input) {
     const task = this.#tail.then(() => this.#receive(type, input)); this.#tail = task.catch(() => {}); return task;
   }
   async #receive(type, input) {
     let message;
-    try { message = mapHaEvent(type, input, this.allowedEntities, this.now().getTime()); }
+    try { message = mapHaEvent(type, input, this.allowedEntities, this.now().getTime(), this.contract); }
     catch { return { outcome: 'rejected' }; }
     const now = this.now().getTime(), expiry = Date.parse(message.expiresAt);
     if (expiry <= now) return { outcome: 'expired' };

@@ -2,7 +2,7 @@
 
 MCP Gateway is a private, single-owner preview that routes configured Streamable HTTP MCP backends through one loopback listener. It includes an optional Home Assistant History reader and an adapter from HA custom events to signed webhook subscriptions.
 
-Version: `0.7.0-preview.0`. This tree contains fictional examples and offline tests. Account-specific plugin access and delivery must be verified with the actual client. Publishing this source does not publish a plugin or connect a Home Assistant instance.
+Version: `0.7.0-preview.1`. This tree contains fictional examples and offline tests. Account-specific plugin access and delivery must be verified with the actual client. Publishing this source does not publish a plugin or connect a Home Assistant instance.
 
 ## Behavior
 
@@ -12,7 +12,7 @@ Version: `0.7.0-preview.0`. This tree contains fictional examples and offline te
 - HA owns sustained-state conditions and recovery timers. The gateway subscribes to four custom HA event types, validates their envelopes and maintains a bounded encrypted delivery queue. Events during a disconnected interval are not replayed.
 - Subscriptions use finite leases, callback verification, signed delivery, bounded retries, expiry and unsubscribe fencing. Recovery delivery requires an earlier attention delivery receipt.
 
-The HA adapter currently has a fixed five-resource example contract. To use different entities, update the mapping, event schemas and HA YAML together in a private deployment copy. The `entityIds` configuration selects from that contract; it does not accept arbitrary entity identifiers.
+The HA adapter has five fixed semantic resources. Its default contract contains fictional identifiers. A private deployment can provide `haConnector.contractFile` pointing to a private JSON mapping under `/run/config`; the gateway derives event and History schemas from those exact bindings. The `entityIds` configuration selects only from that contract. See [the HA example guide](docs/home-assistant.md).
 
 ## Development checks
 

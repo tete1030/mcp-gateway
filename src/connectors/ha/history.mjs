@@ -1,15 +1,18 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod/v4';
-import { entityIds } from './contract.mjs';
+import { selectedEntity } from './contract.mjs';
 import { parseTime, displayTime } from './time.mjs';
-const schema = z.object({ from: z.string().max(48), to: z.string().max(48), timezone: z.string().max(80).default('Etc/UTC'),
-  entityIds: z.array(z.enum(entityIds)).min(1).max(5), limit: z.number().int().min(1).max(500).default(100),
+const schema = allowed => z.object({ from: z.string().max(48), to: z.string().max(48), timezone: z.string().max(80).default('Etc/UTC'),
+  entityIds: z.array(z.enum(allowed)).min(1).max(5), limit: z.number().int().min(1).max(500).default(100),
   cursor: z.string().max(4096).optional() }).strict();
 const maxResponseBytes = 2 * 1024 * 1024, chunkMs = 24 * 3600_000;
 export class HaHistory {
   constructor({ origin, entityIds: allowed, resolveToken, cursorSecret, owner, timeoutMs = 10_000, fetchImpl = fetch, now = Date.now }) {
     const url = new URL(origin);
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error('Invalid HA history origin');
+    const ids = z.array(selectedEntity).min(1).max(5).parse(allowed);
+    if (new Set(ids).size !== ids.length) throw new Error('Duplicate HA history entity');
+    this.schema = schema(ids);
     Object.assign(this, { origin: url.origin, allowed, resolveToken, cursorSecret, owner, timeoutMs, fetchImpl, now });
   }
   #sign(value) { return createHmac('sha256', this.cursorSecret).update(`${this.owner}:${value}`).digest('base64url'); }
@@ -48,7 +51,7 @@ export class HaHistory {
     return { records, missing: selected.filter(id => !seenEntities.has(id)) };
   }
   async query(input) {
-    const args = schema.parse(input), start = parseTime(args.from, args.timezone), end = parseTime(args.to, args.timezone);
+    const args = this.schema.parse(input), start = parseTime(args.from, args.timezone), end = parseTime(args.to, args.timezone);
     if (end <= start || new Set(args.entityIds).size !== args.entityIds.length || args.entityIds.some(id => !this.allowed.includes(id))) throw new Error('Invalid or unapproved history range/entities');
     const query = JSON.stringify({ start, end, timezone: args.timezone, entities: args.entityIds }), deadline = this.now() + 20_000;
     let chunkStart = start, offset = 0;
@@ -75,7 +78,7 @@ export class HaHistory {
   }
   backend() {
     const tool = { name: 'ha_history__query', description: 'Read only the explicitly approved five HA entities from existing History API. ISO from/to; offset or timezone for local times. No capture, backfill or device action.',
-      inputSchema: z.toJSONSchema(schema), annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } };
+      inputSchema: z.toJSONSchema(this.schema), annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } };
     return { id: 'ha_history', config: {}, health: () => ({ id: 'ha_history', state: 'ready' }), listTools: async () => [tool], close: async () => {},
       call: async (name, args) => {
         if (name !== tool.name) throw new Error('Unknown history tool');

@@ -1,4 +1,4 @@
-import { eventTypes } from './contract.mjs';
+import { eventTypes as defaultEventTypes } from './contract.mjs';
 
 // Realtime custom events only: no state rules, snapshot inference or replay.
 export class HaEventSocket {
@@ -6,10 +6,10 @@ export class HaEventSocket {
   #queue = Promise.resolve(); #subscriptions = new Map(); #pending = new Set();
   #heartbeat; #reconnect; #attempt = 0; #lastReceived = 0; #state = 'stopped'; #gaps = 0;
   constructor({ url, secretRef }, { resolveSecret, receive, WebSocketImpl = WebSocket,
-    schedule = setTimeout, cancel = clearTimeout, now = Date.now } = {}) {
+    schedule = setTimeout, cancel = clearTimeout, now = Date.now, eventTypes = defaultEventTypes } = {}) {
     const u = new URL(url);
     if (!['ws:', 'wss:'].includes(u.protocol) || u.username || u.password || u.search || u.hash || u.pathname !== '/api/websocket') throw new Error('Invalid HA event endpoint');
-    Object.assign(this, { url, secretRef, types: eventTypes, resolveSecret, receive, WebSocketImpl, schedule, cancel, now });
+    Object.assign(this, { url, secretRef, types: [...eventTypes], resolveSecret, receive, WebSocketImpl, schedule, cancel, now });
   }
   health() { return { id: 'ha', state: this.#state, subscribedEventTypes: this.#subscriptions.size,
     connectionGaps: this.#gaps, replay: false }; }
