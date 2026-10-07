@@ -1,0 +1,52 @@
+{
+  "configVersion": 2,
+  "mode": "aggregate",
+  "identity": {
+    "ownerId": "public-owner",
+    "secretRef": "service"
+  },
+  "secrets": {
+    "service": {
+      "env": "PUBLIC_SERVICE_FIXTURE"
+    },
+    "ha": {
+      "env": "PUBLIC_HA_FIXTURE"
+    },
+    "state": {
+      "env": "PUBLIC_STATE_FIXTURE"
+    }
+  },
+  "backends": [
+    {
+      "id": "ha",
+      "enabled": false,
+      "transport": "streamable_http",
+      "url": "http://ha.example.invalid:8123/api/mcp/assist",
+      "auth": {
+        "type": "bearer",
+        "secretRef": "ha"
+      }
+    }
+  ],
+  "events": {
+    "enabled": false,
+    "callback": {
+      "mode": "exact_host_allowlist",
+      "allowedHosts": [
+        "connectors.api.openai.com"
+      ]
+    }
+  },
+  "haConnector": {
+    "backendId": "ha",
+    "eventsEnabled": false,
+    "historyEnabled": false,
+    "entityIds": [
+      "vacuum.example_robot",
+      "binary_sensor.example_water_low",
+      "binary_sensor.example_food_channel_1_low",
+      "binary_sensor.example_food_channel_2_low",
+      "binary_sensor.example_bin_full"
+    ]
+  }
+}

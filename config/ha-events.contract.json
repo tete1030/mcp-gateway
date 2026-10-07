@@ -1,0 +1,423 @@
+[
+  {
+    "name": "vacuum__fault",
+    "title": "Example robot fault",
+    "description": "Only the explicitly selected entity state; attention and confirmed recovery.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "deviceIds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "vacuum_example"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "includeRecovery": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "deviceIds"
+      ],
+      "additionalProperties": false
+    },
+    "payloadSchema": {
+      "type": "object",
+      "properties": {
+        "eventVersion": {
+          "const": 1
+        },
+        "source": {
+          "const": "ha_selected_entities"
+        },
+        "ruleId": {
+          "type": "string"
+        },
+        "deviceId": {
+          "enum": [
+            "vacuum_example"
+          ]
+        },
+        "incidentId": {
+          "type": "string"
+        },
+        "phase": {
+          "enum": [
+            "attention",
+            "recovered"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "warning",
+            "info"
+          ]
+        },
+        "observedAt": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "eventVersion",
+        "source",
+        "ruleId",
+        "deviceId",
+        "incidentId",
+        "phase",
+        "severity",
+        "observedAt",
+        "summary"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "pet__water_low",
+    "title": "Example water low",
+    "description": "Only the explicitly selected entity state; attention and confirmed recovery.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "deviceIds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "water_example"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "includeRecovery": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "deviceIds"
+      ],
+      "additionalProperties": false
+    },
+    "payloadSchema": {
+      "type": "object",
+      "properties": {
+        "eventVersion": {
+          "const": 1
+        },
+        "source": {
+          "const": "ha_selected_entities"
+        },
+        "ruleId": {
+          "type": "string"
+        },
+        "deviceId": {
+          "enum": [
+            "water_example"
+          ]
+        },
+        "incidentId": {
+          "type": "string"
+        },
+        "phase": {
+          "enum": [
+            "attention",
+            "recovered"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "warning",
+            "info"
+          ]
+        },
+        "observedAt": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "eventVersion",
+        "source",
+        "ruleId",
+        "deviceId",
+        "incidentId",
+        "phase",
+        "severity",
+        "observedAt",
+        "summary"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "pet__food_low",
+    "title": "Example feeder low",
+    "description": "Only the explicitly selected entity state; attention and confirmed recovery.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "deviceIds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "feeder_example_channel1",
+              "feeder_example_channel2"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 2
+        },
+        "includeRecovery": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "deviceIds"
+      ],
+      "additionalProperties": false
+    },
+    "payloadSchema": {
+      "type": "object",
+      "properties": {
+        "eventVersion": {
+          "const": 1
+        },
+        "source": {
+          "const": "ha_selected_entities"
+        },
+        "ruleId": {
+          "type": "string"
+        },
+        "deviceId": {
+          "enum": [
+            "feeder_example_channel1",
+            "feeder_example_channel2"
+          ]
+        },
+        "incidentId": {
+          "type": "string"
+        },
+        "phase": {
+          "enum": [
+            "attention",
+            "recovered"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "warning",
+            "info"
+          ]
+        },
+        "observedAt": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "eventVersion",
+        "source",
+        "ruleId",
+        "deviceId",
+        "incidentId",
+        "phase",
+        "severity",
+        "observedAt",
+        "summary"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "pet__litter_full",
+    "title": "Example bin full",
+    "description": "Fictitious example bin-full sensor; selected state only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "deviceIds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "bin_example"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "includeRecovery": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "deviceIds"
+      ],
+      "additionalProperties": false
+    },
+    "payloadSchema": {
+      "type": "object",
+      "properties": {
+        "eventVersion": {
+          "const": 1
+        },
+        "source": {
+          "const": "ha_selected_entities"
+        },
+        "ruleId": {
+          "type": "string"
+        },
+        "deviceId": {
+          "enum": [
+            "bin_example"
+          ]
+        },
+        "incidentId": {
+          "type": "string"
+        },
+        "phase": {
+          "enum": [
+            "attention",
+            "recovered"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "warning",
+            "info"
+          ]
+        },
+        "observedAt": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "eventVersion",
+        "source",
+        "ruleId",
+        "deviceId",
+        "incidentId",
+        "phase",
+        "severity",
+        "observedAt",
+        "summary"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "gateway__digest",
+    "title": "Reserved digest event",
+    "description": "Reserved event contract for compatibility; the runtime has no generator or emission tool.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "payloadSchema": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "const": "business_rule_digest"
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "properties": {
+              "ruleId": {
+                "type": "string"
+              },
+              "deviceId": {
+                "type": "string"
+              },
+              "phase": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "ruleId",
+              "deviceId",
+              "phase",
+              "count"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "observedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "items",
+        "observedAt"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "poc__synthetic",
+    "title": "Reserved synthetic test event",
+    "description": "Reserved event contract for compatibility; the runtime has no generator or emission tool.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "warning",
+            "cat"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "payloadSchema": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "warning",
+            "cat"
+          ]
+        },
+        "source": {
+          "const": "synthetic_poc"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "kind",
+        "source",
+        "message"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

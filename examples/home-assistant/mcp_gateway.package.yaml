@@ -1,0 +1,586 @@
+# Fictional HA native YAML example; not installed by this repository.
+# for timers reset on HA restart/reload. No replay, archive, business DSL or device actions.
+# Enable switch restores prior state; defaults off when first created.
+input_boolean:
+  mcp_gateway_events_enabled:
+    name: MCP Gateway HA native events enabled
+input_datetime:
+  mcp_gateway_events_started:
+    name: MCP Gateway HA event observation start
+    has_date: true
+    has_time: true
+input_text:
+  mcp_gateway_events_vacuum_fault_incident:
+    name: MCP Gateway vacuum_fault incident
+    max: 128
+  mcp_gateway_events_water_low_incident:
+    name: MCP Gateway water_low incident
+    max: 128
+  mcp_gateway_events_food_hopper1_incident:
+    name: MCP Gateway food_hopper1 incident
+    max: 128
+  mcp_gateway_events_food_hopper2_incident:
+    name: MCP Gateway food_hopper2 incident
+    max: 128
+  mcp_gateway_events_litter_full_incident:
+    name: MCP Gateway litter_full incident
+    max: 128
+automation:
+- id: mcp_gateway_events_baseline
+  alias: MCP Gateway event observation baseline
+  mode: single
+  triggers:
+  - trigger: homeassistant
+    event: start
+  - trigger: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    to: 'on'
+  actions:
+  - action: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.mcp_gateway_events_started
+    data:
+      timestamp: '{{ as_timestamp(now()) }}'
+- id: mcp_gateway_vacuum_fault_attention
+  alias: MCP Gateway Example robot fault state attention
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: vacuum.example_robot
+    to: error
+    for:
+      seconds: 60
+  conditions:
+  - condition: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    state: 'on'
+  - condition: template
+    value_template: '{{ is_state(''vacuum.example_robot'', ''error'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_vacuum_fault_incident'') in ['''', ''unknown'', ''unavailable''] }}'
+  - condition: template
+    value_template: '{{ trigger.from_state is not none and as_timestamp(trigger.to_state.last_changed) > as_timestamp(states(''input_datetime.mcp_gateway_events_started''),
+      0) }}'
+  actions:
+  - variables:
+      episode: vacuum_fault.{{ trigger.to_state.context.id }}
+      stamp: '{{ utcnow().isoformat() }}'
+      until: '{{ (utcnow() + timedelta(seconds=1800)).isoformat() }}'
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.mcp_gateway_events_vacuum_fault_incident
+    data:
+      value: '{{ episode }}'
+  - event: mcp_ha_vacuum_fault
+    event_data:
+      entityId: vacuum.example_robot
+      eventId: '{{ episode ~ '':attention'' }}'
+      occurredAt: '{{ stamp }}'
+      expiresAt: '{{ until }}'
+      data:
+        eventVersion: 1
+        source: ha_selected_entities
+        ruleId: vacuum_fault
+        deviceId: vacuum_example
+        incidentId: '{{ episode }}'
+        phase: attention
+        severity: warning
+        observedAt: '{{ stamp }}'
+        summary: Example robot fault state
+- id: mcp_gateway_vacuum_fault_recovered
+  alias: MCP Gateway Example robot fault state recovery
+  mode: restart
+  triggers:
+  - trigger: template
+    id: normal
+    value_template: '{{ states(''vacuum.example_robot'') in [''docked'', ''idle'', ''cleaning'', ''returning'', ''paused''] }}'
+    for:
+      seconds: 120
+  - trigger: homeassistant
+    id: startup
+    event: start
+  conditions:
+  - condition: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    state: 'on'
+  - condition: template
+    value_template: '{{ states(''vacuum.example_robot'') in [''docked'', ''idle'', ''cleaning'', ''returning'', ''paused''] }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_vacuum_fault_incident'') not in ['''', ''unknown'', ''unavailable''] }}'
+  actions:
+  - if:
+    - condition: trigger
+      id: startup
+    then:
+    - wait_for_trigger:
+      - trigger: template
+        value_template: '{{ not (states(''vacuum.example_robot'') in [''docked'', ''idle'', ''cleaning'', ''returning'', ''paused''])
+          }}'
+      timeout:
+        seconds: 120
+      continue_on_timeout: true
+    - condition: template
+      value_template: '{{ not wait.completed }}'
+  - condition: template
+    value_template: '{{ states(''vacuum.example_robot'') in [''docked'', ''idle'', ''cleaning'', ''returning'', ''paused''] }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_vacuum_fault_incident'') not in ['''', ''unknown'', ''unavailable''] }}'
+  - variables:
+      episode: '{{ states(''input_text.mcp_gateway_events_vacuum_fault_incident'') }}'
+      stamp: '{{ utcnow().isoformat() }}'
+      until: '{{ (utcnow() + timedelta(seconds=1800)).isoformat() }}'
+  - event: mcp_ha_vacuum_fault
+    event_data:
+      entityId: vacuum.example_robot
+      eventId: '{{ episode ~ '':recovered'' }}'
+      occurredAt: '{{ stamp }}'
+      expiresAt: '{{ until }}'
+      data:
+        eventVersion: 1
+        source: ha_selected_entities
+        ruleId: vacuum_fault
+        deviceId: vacuum_example
+        incidentId: '{{ episode }}'
+        phase: recovered
+        severity: info
+        observedAt: '{{ stamp }}'
+        summary: Example robot fault state
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.mcp_gateway_events_vacuum_fault_incident
+    data:
+      value: ''
+- id: mcp_gateway_water_low_attention
+  alias: MCP Gateway Example water device water-low state attention
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.example_water_low
+    to: 'on'
+    for:
+      seconds: 300
+  conditions:
+  - condition: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    state: 'on'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_water_low'', ''on'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_water_low_incident'') in ['''', ''unknown'', ''unavailable''] }}'
+  - condition: template
+    value_template: '{{ trigger.from_state is not none and as_timestamp(trigger.to_state.last_changed) > as_timestamp(states(''input_datetime.mcp_gateway_events_started''),
+      0) }}'
+  actions:
+  - variables:
+      episode: water_low.{{ trigger.to_state.context.id }}
+      stamp: '{{ utcnow().isoformat() }}'
+      until: '{{ (utcnow() + timedelta(seconds=7200)).isoformat() }}'
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.mcp_gateway_events_water_low_incident
+    data:
+      value: '{{ episode }}'
+  - event: mcp_ha_water_low
+    event_data:
+      entityId: binary_sensor.example_water_low
+      eventId: '{{ episode ~ '':attention'' }}'
+      occurredAt: '{{ stamp }}'
+      expiresAt: '{{ until }}'
+      data:
+        eventVersion: 1
+        source: ha_selected_entities
+        ruleId: water_low
+        deviceId: water_example
+        incidentId: '{{ episode }}'
+        phase: attention
+        severity: warning
+        observedAt: '{{ stamp }}'
+        summary: Example water device water-low state
+- id: mcp_gateway_water_low_recovered
+  alias: MCP Gateway Example water device water-low state recovery
+  mode: restart
+  triggers:
+  - trigger: template
+    id: normal
+    value_template: '{{ is_state(''binary_sensor.example_water_low'', ''off'') }}'
+    for:
+      seconds: 300
+  - trigger: homeassistant
+    id: startup
+    event: start
+  conditions:
+  - condition: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    state: 'on'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_water_low'', ''off'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_water_low_incident'') not in ['''', ''unknown'', ''unavailable''] }}'
+  actions:
+  - if:
+    - condition: trigger
+      id: startup
+    then:
+    - wait_for_trigger:
+      - trigger: template
+        value_template: '{{ not (is_state(''binary_sensor.example_water_low'', ''off'')) }}'
+      timeout:
+        seconds: 300
+      continue_on_timeout: true
+    - condition: template
+      value_template: '{{ not wait.completed }}'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_water_low'', ''off'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_water_low_incident'') not in ['''', ''unknown'', ''unavailable''] }}'
+  - variables:
+      episode: '{{ states(''input_text.mcp_gateway_events_water_low_incident'') }}'
+      stamp: '{{ utcnow().isoformat() }}'
+      until: '{{ (utcnow() + timedelta(seconds=7200)).isoformat() }}'
+  - event: mcp_ha_water_low
+    event_data:
+      entityId: binary_sensor.example_water_low
+      eventId: '{{ episode ~ '':recovered'' }}'
+      occurredAt: '{{ stamp }}'
+      expiresAt: '{{ until }}'
+      data:
+        eventVersion: 1
+        source: ha_selected_entities
+        ruleId: water_low
+        deviceId: water_example
+        incidentId: '{{ episode }}'
+        phase: recovered
+        severity: info
+        observedAt: '{{ stamp }}'
+        summary: Example water device water-low state
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.mcp_gateway_events_water_low_incident
+    data:
+      value: ''
+- id: mcp_gateway_food_hopper1_attention
+  alias: MCP Gateway Example feeder channel 1 food-low state attention
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.example_food_channel_1_low
+    to: 'on'
+    for:
+      seconds: 600
+  conditions:
+  - condition: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    state: 'on'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_food_channel_1_low'', ''on'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_food_hopper1_incident'') in ['''', ''unknown'', ''unavailable''] }}'
+  - condition: template
+    value_template: '{{ trigger.from_state is not none and as_timestamp(trigger.to_state.last_changed) > as_timestamp(states(''input_datetime.mcp_gateway_events_started''),
+      0) }}'
+  actions:
+  - variables:
+      episode: food_hopper1.{{ trigger.to_state.context.id }}
+      stamp: '{{ utcnow().isoformat() }}'
+      until: '{{ (utcnow() + timedelta(seconds=7200)).isoformat() }}'
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.mcp_gateway_events_food_hopper1_incident
+    data:
+      value: '{{ episode }}'
+  - event: mcp_ha_food_low
+    event_data:
+      entityId: binary_sensor.example_food_channel_1_low
+      eventId: '{{ episode ~ '':attention'' }}'
+      occurredAt: '{{ stamp }}'
+      expiresAt: '{{ until }}'
+      data:
+        eventVersion: 1
+        source: ha_selected_entities
+        ruleId: food_hopper1
+        deviceId: feeder_example_channel1
+        incidentId: '{{ episode }}'
+        phase: attention
+        severity: warning
+        observedAt: '{{ stamp }}'
+        summary: Example feeder channel 1 food-low state
+- id: mcp_gateway_food_hopper1_recovered
+  alias: MCP Gateway Example feeder channel 1 food-low state recovery
+  mode: restart
+  triggers:
+  - trigger: template
+    id: normal
+    value_template: '{{ is_state(''binary_sensor.example_food_channel_1_low'', ''off'') }}'
+    for:
+      seconds: 300
+  - trigger: homeassistant
+    id: startup
+    event: start
+  conditions:
+  - condition: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    state: 'on'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_food_channel_1_low'', ''off'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_food_hopper1_incident'') not in ['''', ''unknown'', ''unavailable''] }}'
+  actions:
+  - if:
+    - condition: trigger
+      id: startup
+    then:
+    - wait_for_trigger:
+      - trigger: template
+        value_template: '{{ not (is_state(''binary_sensor.example_food_channel_1_low'', ''off''))
+          }}'
+      timeout:
+        seconds: 300
+      continue_on_timeout: true
+    - condition: template
+      value_template: '{{ not wait.completed }}'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_food_channel_1_low'', ''off'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_food_hopper1_incident'') not in ['''', ''unknown'', ''unavailable''] }}'
+  - variables:
+      episode: '{{ states(''input_text.mcp_gateway_events_food_hopper1_incident'') }}'
+      stamp: '{{ utcnow().isoformat() }}'
+      until: '{{ (utcnow() + timedelta(seconds=7200)).isoformat() }}'
+  - event: mcp_ha_food_low
+    event_data:
+      entityId: binary_sensor.example_food_channel_1_low
+      eventId: '{{ episode ~ '':recovered'' }}'
+      occurredAt: '{{ stamp }}'
+      expiresAt: '{{ until }}'
+      data:
+        eventVersion: 1
+        source: ha_selected_entities
+        ruleId: food_hopper1
+        deviceId: feeder_example_channel1
+        incidentId: '{{ episode }}'
+        phase: recovered
+        severity: info
+        observedAt: '{{ stamp }}'
+        summary: Example feeder channel 1 food-low state
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.mcp_gateway_events_food_hopper1_incident
+    data:
+      value: ''
+- id: mcp_gateway_food_hopper2_attention
+  alias: MCP Gateway Example feeder channel 2 food-low state attention
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.example_food_channel_2_low
+    to: 'on'
+    for:
+      seconds: 600
+  conditions:
+  - condition: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    state: 'on'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_food_channel_2_low'', ''on'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_food_hopper2_incident'') in ['''', ''unknown'', ''unavailable''] }}'
+  - condition: template
+    value_template: '{{ trigger.from_state is not none and as_timestamp(trigger.to_state.last_changed) > as_timestamp(states(''input_datetime.mcp_gateway_events_started''),
+      0) }}'
+  actions:
+  - variables:
+      episode: food_hopper2.{{ trigger.to_state.context.id }}
+      stamp: '{{ utcnow().isoformat() }}'
+      until: '{{ (utcnow() + timedelta(seconds=7200)).isoformat() }}'
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.mcp_gateway_events_food_hopper2_incident
+    data:
+      value: '{{ episode }}'
+  - event: mcp_ha_food_low
+    event_data:
+      entityId: binary_sensor.example_food_channel_2_low
+      eventId: '{{ episode ~ '':attention'' }}'
+      occurredAt: '{{ stamp }}'
+      expiresAt: '{{ until }}'
+      data:
+        eventVersion: 1
+        source: ha_selected_entities
+        ruleId: food_hopper2
+        deviceId: feeder_example_channel2
+        incidentId: '{{ episode }}'
+        phase: attention
+        severity: warning
+        observedAt: '{{ stamp }}'
+        summary: Example feeder channel 2 food-low state
+- id: mcp_gateway_food_hopper2_recovered
+  alias: MCP Gateway Example feeder channel 2 food-low state recovery
+  mode: restart
+  triggers:
+  - trigger: template
+    id: normal
+    value_template: '{{ is_state(''binary_sensor.example_food_channel_2_low'', ''off'') }}'
+    for:
+      seconds: 300
+  - trigger: homeassistant
+    id: startup
+    event: start
+  conditions:
+  - condition: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    state: 'on'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_food_channel_2_low'', ''off'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_food_hopper2_incident'') not in ['''', ''unknown'', ''unavailable''] }}'
+  actions:
+  - if:
+    - condition: trigger
+      id: startup
+    then:
+    - wait_for_trigger:
+      - trigger: template
+        value_template: '{{ not (is_state(''binary_sensor.example_food_channel_2_low'', ''off''))
+          }}'
+      timeout:
+        seconds: 300
+      continue_on_timeout: true
+    - condition: template
+      value_template: '{{ not wait.completed }}'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_food_channel_2_low'', ''off'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_food_hopper2_incident'') not in ['''', ''unknown'', ''unavailable''] }}'
+  - variables:
+      episode: '{{ states(''input_text.mcp_gateway_events_food_hopper2_incident'') }}'
+      stamp: '{{ utcnow().isoformat() }}'
+      until: '{{ (utcnow() + timedelta(seconds=7200)).isoformat() }}'
+  - event: mcp_ha_food_low
+    event_data:
+      entityId: binary_sensor.example_food_channel_2_low
+      eventId: '{{ episode ~ '':recovered'' }}'
+      occurredAt: '{{ stamp }}'
+      expiresAt: '{{ until }}'
+      data:
+        eventVersion: 1
+        source: ha_selected_entities
+        ruleId: food_hopper2
+        deviceId: feeder_example_channel2
+        incidentId: '{{ episode }}'
+        phase: recovered
+        severity: info
+        observedAt: '{{ stamp }}'
+        summary: Example feeder channel 2 food-low state
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.mcp_gateway_events_food_hopper2_incident
+    data:
+      value: ''
+- id: mcp_gateway_litter_full_attention
+  alias: MCP Gateway Example bin full state attention
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.example_bin_full
+    to: 'on'
+    for:
+      seconds: 300
+  conditions:
+  - condition: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    state: 'on'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_bin_full'', ''on'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_litter_full_incident'') in ['''', ''unknown'', ''unavailable''] }}'
+  - condition: template
+    value_template: '{{ trigger.from_state is not none and as_timestamp(trigger.to_state.last_changed) > as_timestamp(states(''input_datetime.mcp_gateway_events_started''),
+      0) }}'
+  actions:
+  - variables:
+      episode: litter_full.{{ trigger.to_state.context.id }}
+      stamp: '{{ utcnow().isoformat() }}'
+      until: '{{ (utcnow() + timedelta(seconds=7200)).isoformat() }}'
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.mcp_gateway_events_litter_full_incident
+    data:
+      value: '{{ episode }}'
+  - event: mcp_ha_litter_full
+    event_data:
+      entityId: binary_sensor.example_bin_full
+      eventId: '{{ episode ~ '':attention'' }}'
+      occurredAt: '{{ stamp }}'
+      expiresAt: '{{ until }}'
+      data:
+        eventVersion: 1
+        source: ha_selected_entities
+        ruleId: litter_full
+        deviceId: bin_example
+        incidentId: '{{ episode }}'
+        phase: attention
+        severity: warning
+        observedAt: '{{ stamp }}'
+        summary: Example bin full state
+- id: mcp_gateway_litter_full_recovered
+  alias: MCP Gateway Example bin full state recovery
+  mode: restart
+  triggers:
+  - trigger: template
+    id: normal
+    value_template: '{{ is_state(''binary_sensor.example_bin_full'', ''off'') }}'
+    for:
+      seconds: 300
+  - trigger: homeassistant
+    id: startup
+    event: start
+  conditions:
+  - condition: state
+    entity_id: input_boolean.mcp_gateway_events_enabled
+    state: 'on'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_bin_full'', ''off'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_litter_full_incident'') not in ['''', ''unknown'', ''unavailable''] }}'
+  actions:
+  - if:
+    - condition: trigger
+      id: startup
+    then:
+    - wait_for_trigger:
+      - trigger: template
+        value_template: '{{ not (is_state(''binary_sensor.example_bin_full'', ''off'')) }}'
+      timeout:
+        seconds: 300
+      continue_on_timeout: true
+    - condition: template
+      value_template: '{{ not wait.completed }}'
+  - condition: template
+    value_template: '{{ is_state(''binary_sensor.example_bin_full'', ''off'') }}'
+  - condition: template
+    value_template: '{{ states(''input_text.mcp_gateway_events_litter_full_incident'') not in ['''', ''unknown'', ''unavailable''] }}'
+  - variables:
+      episode: '{{ states(''input_text.mcp_gateway_events_litter_full_incident'') }}'
+      stamp: '{{ utcnow().isoformat() }}'
+      until: '{{ (utcnow() + timedelta(seconds=7200)).isoformat() }}'
+  - event: mcp_ha_litter_full
+    event_data:
+      entityId: binary_sensor.example_bin_full
+      eventId: '{{ episode ~ '':recovered'' }}'
+      occurredAt: '{{ stamp }}'
+      expiresAt: '{{ until }}'
+      data:
+        eventVersion: 1
+        source: ha_selected_entities
+        ruleId: litter_full
+        deviceId: bin_example
+        incidentId: '{{ episode }}'
+        phase: recovered
+        severity: info
+        observedAt: '{{ stamp }}'
+        summary: Example bin full state
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.mcp_gateway_events_litter_full_incident
+    data:
+      value: ''

@@ -1,0 +1,29 @@
+{
+  "fixtureOnly": true,
+  "tools": [
+    {
+      "name": "homeassistant__GetLiveContext",
+      "description": "Fictional native context read fixture",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "llm__GetDateTime",
+      "description": "Fictional native time read fixture",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    }
+  ]
+}
